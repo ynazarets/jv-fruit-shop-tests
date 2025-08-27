@@ -19,7 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 class FileOperationsTest {
 
     @TempDir
-    public static Path tempDir;
+    private static Path tempDir;
 
     private FileReader fileReader;
     private FileWriter fileWriter;
