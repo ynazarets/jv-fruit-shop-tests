@@ -27,7 +27,7 @@ class ShopServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        Storage.getFruits().clear();
+        Storage.clear();
         Map<FruitTransaction.Operation, OperationHandler> handlerMap = new HashMap<>();
         handlerMap.put(FruitTransaction.Operation.BALANCE, new BalanceOperation());
         handlerMap.put(FruitTransaction.Operation.SUPPLY, new SupplyOperation());
@@ -114,6 +114,36 @@ class ShopServiceImplTest {
             Assertions.assertThrows(RuntimeException.class, () ->
                     handler.apply(new FruitTransaction(
                             FruitTransaction.Operation.SUPPLY, "   ", 10)));
+        }
+    }
+
+    @Nested
+    @DisplayName("BalanceOperation Tests")
+    class BalanceOperationTest {
+
+        @Test
+        @DisplayName("should correctly set quantity for an existing fruit")
+        void balanceOperation_apply_existingFruit_shouldSetQuantity() {
+            Storage.put("banana", 50);
+            shopService.process(List.of(new FruitTransaction(
+                    FruitTransaction.Operation.BALANCE, "banana", 100)));
+            Assertions.assertEquals(100, Storage.get("banana"));
+        }
+
+        @Test
+        @DisplayName("should correctly set quantity for a new fruit")
+        void balanceOperation_apply_newFruit_shouldSetQuantity() {
+            shopService.process(List.of(new FruitTransaction(
+                    FruitTransaction.Operation.BALANCE, "orange", 200)));
+            Assertions.assertEquals(200, Storage.get("orange"));
+        }
+
+        @Test
+        @DisplayName("should throw RuntimeException for negative quantity")
+        void balanceOperation_apply_negativeQuantity_shouldThrowException() {
+            Assertions.assertThrows(RuntimeException.class, () ->
+                    shopService.process(List.of(new FruitTransaction(
+                            FruitTransaction.Operation.BALANCE, "apple", -1))));
         }
     }
 }

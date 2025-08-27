@@ -10,13 +10,12 @@ import org.junit.jupiter.api.Test;
 
 @DisplayName("ReportGeneratorImpl")
 class ReportGeneratorImplTest {
-
     private ReportGenerator reportGenerator;
 
     @BeforeEach
     void setUp() {
         reportGenerator = new ReportGeneratorImpl();
-        Storage.getFruits().clear();
+        Storage.clear();
     }
 
     @Test
@@ -27,6 +26,13 @@ class ReportGeneratorImplTest {
         String expectedReport = "fruit,quantity" + System.lineSeparator()
                 + "apple,100" + System.lineSeparator()
                 + "banana,50" + System.lineSeparator();
+        Assertions.assertEquals(expectedReport, reportGenerator.getReport());
+    }
+
+    @Test
+    @DisplayName("should generate a report with only header if storage is empty")
+    void getReport_emptyStorage_shouldGenerateOnlyHeader() {
+        String expectedReport = "fruit,quantity" + System.lineSeparator();
         Assertions.assertEquals(expectedReport, reportGenerator.getReport());
     }
 }
