@@ -2,7 +2,7 @@
 This task requires you to cover your [solution](https://github.com/mate-academy/jv-fruit-shop) with tests. 
 
 ### Copy your solution
-Please copy the code from the previous task into the `src/main/java/core/basesyntax` folder.
+Please copy the code from the previous task into the `src/main/java/core/core.basesyntax` folder.
 
 ### Add tests for your services
 Create test classes and tests for checking the work of each of your services. 
