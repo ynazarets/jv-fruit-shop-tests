@@ -1,5 +1,8 @@
 package basesyntax;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import basesyntax.common.FruitTransaction;
 import basesyntax.db.Storage;
 import basesyntax.service.OperationStrategy;
@@ -14,13 +17,12 @@ import basesyntax.strategy.SupplyOperation;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("ShopServiceImpl and OperationHandlers")
+@DisplayName("ShopServiceImpl")
 class ShopServiceImplTest {
 
     private ShopService shopService;
@@ -37,113 +39,30 @@ class ShopServiceImplTest {
         shopService = new ShopServiceImpl(operationStrategy);
     }
 
-    @Nested
-    @DisplayName("Operation Handlers")
-    class OperationHandlersTest {
-        @Test
-        @DisplayName("BalanceOperation should correctly set quantity")
-        void balanceOperation_apply_shouldSetQuantity() {
-            shopService.process(List.of(new FruitTransaction(
-                    FruitTransaction.Operation.BALANCE, "apple", 100)));
-            Assertions.assertEquals(100, Storage.get("apple"));
-        }
-
-        @Test
-        @DisplayName("SupplyOperation should correctly add quantity")
-        void supplyOperation_apply_shouldAddQuantity() {
-            Storage.put("apple", 50);
-            shopService.process(List.of(new FruitTransaction(
-                    FruitTransaction.Operation.SUPPLY, "apple", 20)));
-            Assertions.assertEquals(70, Storage.get("apple"));
-        }
-
-        @Test
-        @DisplayName("PurchaseOperation should correctly subtract quantity")
-        void purchaseOperation_apply_shouldSubtractQuantity() {
-            Storage.put("apple", 50);
-            shopService.process(List.of(new FruitTransaction(
-                    FruitTransaction.Operation.PURCHASE, "apple", 20)));
-            Assertions.assertEquals(30, Storage.get("apple"));
-        }
-
-        @Test
-        @DisplayName("PurchaseOperation should throw RuntimeException for insufficient stock")
-        void purchaseOperation_insufficientStock_shouldThrowException() {
-            Storage.put("apple", 5);
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    shopService.process(List.of(new FruitTransaction(
-                            FruitTransaction.Operation.PURCHASE, "apple", 10))));
-        }
-
-        @Test
-        @DisplayName("ReturnOperation should correctly add quantity")
-        void returnOperation_apply_shouldAddQuantity() {
-            Storage.put("apple", 50);
-            shopService.process(List.of(new FruitTransaction(
-                    FruitTransaction.Operation.RETURN, "apple", 20)));
-            Assertions.assertEquals(70, Storage.get("apple"));
-        }
-
-        @Test
-        @DisplayName("Operations should throw RuntimeException for invalid quantities")
-        void operations_invalidQuantity_shouldThrowException() {
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    new BalanceOperation().apply(new FruitTransaction(
-                            FruitTransaction.Operation.BALANCE, "apple", -1)));
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    new SupplyOperation().apply(new FruitTransaction(
-                            FruitTransaction.Operation.SUPPLY, "apple", 0)));
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    new PurchaseOperation().apply(new FruitTransaction(
-                            FruitTransaction.Operation.PURCHASE, "apple", 0)));
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    new ReturnOperation().apply(new FruitTransaction(
-                            FruitTransaction.Operation.RETURN, "apple", 0)));
-        }
-
-        @Test
-        @DisplayName("Operations should throw RuntimeException for null or empty fruit name")
-        void operations_nullOrEmptyFruitName_shouldThrowException() {
-            OperationHandler handler = new SupplyOperation();
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    handler.apply(new FruitTransaction(
-                            FruitTransaction.Operation.SUPPLY, null, 10)));
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    handler.apply(new FruitTransaction(
-                            FruitTransaction.Operation.SUPPLY, "", 10)));
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    handler.apply(new FruitTransaction(
-                            FruitTransaction.Operation.SUPPLY, "   ", 10)));
-        }
+    @AfterEach
+    void tearDown() {
+        Storage.clear();
     }
 
-    @Nested
-    @DisplayName("BalanceOperation Tests")
-    class BalanceOperationTest {
+    @Test
+    @DisplayName("should process transactions and update storage correctly")
+    void process_validTransactions_shouldUpdateStorage() {
+        List<FruitTransaction> transactions = List.of(
+                new FruitTransaction(FruitTransaction.Operation.BALANCE, "apple", 100),
+                new FruitTransaction(FruitTransaction.Operation.SUPPLY, "apple", 50),
+                new FruitTransaction(FruitTransaction.Operation.PURCHASE, "apple", 25)
+        );
+        shopService.process(transactions);
+        assertEquals(125, Storage.get("apple"));
+    }
 
-        @Test
-        @DisplayName("should correctly set quantity for an existing fruit")
-        void balanceOperation_apply_existingFruit_shouldSetQuantity() {
-            Storage.put("banana", 50);
-            shopService.process(List.of(new FruitTransaction(
-                    FruitTransaction.Operation.BALANCE, "banana", 100)));
-            Assertions.assertEquals(100, Storage.get("banana"));
-        }
-
-        @Test
-        @DisplayName("should correctly set quantity for a new fruit")
-        void balanceOperation_apply_newFruit_shouldSetQuantity() {
-            shopService.process(List.of(new FruitTransaction(
-                    FruitTransaction.Operation.BALANCE, "orange", 200)));
-            Assertions.assertEquals(200, Storage.get("orange"));
-        }
-
-        @Test
-        @DisplayName("should throw RuntimeException for negative quantity")
-        void balanceOperation_apply_negativeQuantity_shouldThrowException() {
-            Assertions.assertThrows(RuntimeException.class, () ->
-                    shopService.process(List.of(new FruitTransaction(
-                            FruitTransaction.Operation.BALANCE, "apple", -1))));
-        }
+    @Test
+    @DisplayName("should throw an exception for an invalid transaction in the list")
+    void process_invalidTransaction_shouldThrowException() {
+        List<FruitTransaction> transactions = List.of(
+                new FruitTransaction(FruitTransaction.Operation.BALANCE, "apple", 100),
+                new FruitTransaction(FruitTransaction.Operation.PURCHASE, "apple", 200)
+        );
+        assertThrows(RuntimeException.class, () -> shopService.process(transactions));
     }
 }

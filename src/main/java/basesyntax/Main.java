@@ -41,16 +41,12 @@ public class Main {
         ReportGenerator reportGenerator = new ReportGeneratorImpl();
         FileWriter fileWriter = new FileWriterImpl();
 
-        try {
-            List<String> rawData = fileReader.read(INPUT_FILE_PATH);
-            List<FruitTransaction> transactions = dataConverter.convertToTransaction(rawData);
-            shopService.process(transactions);
-            String report = reportGenerator.getReport();
-            fileWriter.write(report, OUTPUT_FILE_PATH);
-            System.out.println("The report is successfully generated into a file: "
-                    + OUTPUT_FILE_PATH);
-        } catch (RuntimeException e) {
-            throw new RuntimeException("An error occurred while processing data.", e);
-        }
+        List<String> rawData = fileReader.read(INPUT_FILE_PATH);
+        List<FruitTransaction> transactions = dataConverter.convertToTransaction(rawData);
+        shopService.process(transactions);
+        String report = reportGenerator.getReport();
+        fileWriter.write(report, OUTPUT_FILE_PATH);
+        System.out.println("The report is successfully generated into a file: "
+                + OUTPUT_FILE_PATH);
     }
 }
