@@ -1,0 +1,123 @@
+package basesyntax;
+
+import static java.lang.System.lineSeparator;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import basesyntax.common.FruitTransaction;
+import basesyntax.db.Storage;
+import basesyntax.service.DataConverter;
+import basesyntax.service.FileReader;
+import basesyntax.service.FileWriter;
+import basesyntax.service.OperationStrategy;
+import basesyntax.service.ReportGenerator;
+import basesyntax.service.ShopService;
+import basesyntax.serviceimpl.DataConverterImpl;
+import basesyntax.serviceimpl.FileReaderImpl;
+import basesyntax.serviceimpl.FileWriterImpl;
+import basesyntax.serviceimpl.OperationStrategyImpl;
+import basesyntax.serviceimpl.ReportGeneratorImpl;
+import basesyntax.serviceimpl.ShopServiceImpl;
+import basesyntax.strategy.BalanceOperation;
+import basesyntax.strategy.OperationHandler;
+import basesyntax.strategy.PurchaseOperation;
+import basesyntax.strategy.ReturnOperation;
+import basesyntax.strategy.SupplyOperation;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+@DisplayName("ShopService Integration Test")
+class ShopServiceIntegrationTest {
+
+    @TempDir
+    private Path tempDir;
+    private FileReader fileReader;
+    private FileWriter fileWriter;
+    private DataConverter dataConverter;
+    private ShopService shopService;
+    private ReportGenerator reportGenerator;
+    private Path inputFilePath;
+    private Path outputFilePath;
+
+    @BeforeEach
+    void setUp() throws IOException {
+        Storage.clear();
+        fileReader = new FileReaderImpl();
+        fileWriter = new FileWriterImpl();
+        dataConverter = new DataConverterImpl();
+        Map<FruitTransaction.Operation, OperationHandler> handlerMap = new HashMap<>();
+        handlerMap.put(FruitTransaction.Operation.BALANCE, new BalanceOperation());
+        handlerMap.put(FruitTransaction.Operation.SUPPLY, new SupplyOperation());
+        handlerMap.put(FruitTransaction.Operation.PURCHASE, new PurchaseOperation());
+        handlerMap.put(FruitTransaction.Operation.RETURN, new ReturnOperation());
+        OperationStrategy operationStrategy = new OperationStrategyImpl(handlerMap);
+        shopService = new ShopServiceImpl(operationStrategy);
+        reportGenerator = new ReportGeneratorImpl();
+        inputFilePath = tempDir.resolve("input.csv");
+        outputFilePath = tempDir.resolve("report.csv");
+    }
+
+    @AfterEach
+    void tearDown() {
+        Storage.clear();
+    }
+
+    @Test
+    @DisplayName("should correctly process transactions and generate a valid report")
+    void testFullProcess_validData() throws IOException {
+        List<String> rawData = List.of(
+                "type,fruit,quantity",
+                "b,banana,100",
+                "s,apple,50",
+                "s,banana,20",
+                "p,banana,30",
+                "r,apple,5",
+                "b,orange,45"
+        );
+        Files.write(inputFilePath, rawData);
+        List<String> rawTransactions = fileReader.read(inputFilePath.toString());
+        List<FruitTransaction> transactions = dataConverter.convertToTransaction(rawTransactions);
+        shopService.process(transactions);
+        String report = reportGenerator.getReport();
+        fileWriter.write(report, outputFilePath.toString());
+
+        String expectedReport = "fruit,quantity" + lineSeparator()
+                + "apple,55" + lineSeparator()
+                + "banana,90" + lineSeparator()
+                + "orange,45" + lineSeparator();
+
+        String generatedReport = Files.readAllLines(outputFilePath).stream()
+                .collect(StringBuilder::new, (sb, s) -> sb.append(s)
+                        .append(lineSeparator()), StringBuilder::append)
+                .toString();
+
+        assertEquals(expectedReport.split(lineSeparator()).length,
+                generatedReport.split(lineSeparator()).length);
+        for (String line : expectedReport.split(lineSeparator())) {
+            assert (generatedReport.contains(line));
+        }
+    }
+
+    @Test
+    @DisplayName("should generate a correct report for an empty input file")
+    void testFullProcess_emptyInput() throws IOException {
+        List<String> rawData = List.of("type,fruit,quantity");
+        Files.write(inputFilePath, rawData);
+        List<String> rawTransactions = fileReader.read(inputFilePath.toString());
+        List<FruitTransaction> transactions = dataConverter.convertToTransaction(rawTransactions);
+        shopService.process(transactions);
+        String report = reportGenerator.getReport();
+        fileWriter.write(report, outputFilePath.toString());
+        String expectedReport = "fruit,quantity" + lineSeparator();
+        String generatedReport = Files.readString(outputFilePath);
+        assertEquals(expectedReport, generatedReport);
+    }
+}
