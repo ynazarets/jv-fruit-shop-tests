@@ -2,6 +2,7 @@ package basesyntax;
 
 import static java.lang.System.lineSeparator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import basesyntax.common.FruitTransaction;
 import basesyntax.db.Storage;
@@ -88,17 +89,14 @@ class ShopServiceIntegrationTest {
         shopService.process(transactions);
         String report = reportGenerator.getReport();
         fileWriter.write(report, outputFilePath.toString());
-
         String expectedReport = "fruit,quantity" + lineSeparator()
                 + "apple,55" + lineSeparator()
                 + "banana,90" + lineSeparator()
                 + "orange,45" + lineSeparator();
-
         String generatedReport = Files.readAllLines(outputFilePath).stream()
                 .collect(StringBuilder::new, (sb, s) -> sb.append(s)
                         .append(lineSeparator()), StringBuilder::append)
                 .toString();
-
         assertEquals(expectedReport.split(lineSeparator()).length,
                 generatedReport.split(lineSeparator()).length);
         for (String line : expectedReport.split(lineSeparator())) {
@@ -107,8 +105,8 @@ class ShopServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("should generate a correct report for an empty input file")
-    void testFullProcess_emptyInput() throws IOException {
+    @DisplayName("should generate a correct report for an empty input file (with header)")
+    void testFullProcess_emptyInputWithHeader() throws IOException {
         List<String> rawData = List.of("type,fruit,quantity");
         Files.write(inputFilePath, rawData);
         List<String> rawTransactions = fileReader.read(inputFilePath.toString());
@@ -119,5 +117,75 @@ class ShopServiceIntegrationTest {
         String expectedReport = "fruit,quantity" + lineSeparator();
         String generatedReport = Files.readString(outputFilePath);
         assertEquals(expectedReport, generatedReport);
+    }
+
+    @Test
+    @DisplayName("should generate a correct report for a truly empty file (no header)")
+    void testFullProcess_trulyEmptyInput() throws IOException {
+        List<String> rawData = List.of();
+        Files.write(inputFilePath, rawData);
+        List<String> rawTransactions = fileReader.read(inputFilePath.toString());
+        List<FruitTransaction> transactions = dataConverter.convertToTransaction(rawTransactions);
+        shopService.process(transactions);
+        String report = reportGenerator.getReport();
+        fileWriter.write(report, outputFilePath.toString());
+        String expectedReport = "fruit,quantity" + lineSeparator();
+        String generatedReport = Files.readString(outputFilePath);
+        assertEquals(expectedReport, generatedReport);
+    }
+
+    @Test
+    @DisplayName("should process a single transaction correctly")
+    void testFullProcess_singleTransaction() throws IOException {
+        List<String> rawData = List.of("type,fruit,quantity", "s,banana,100");
+        Files.write(inputFilePath, rawData);
+        List<String> rawTransactions = fileReader.read(inputFilePath.toString());
+        List<FruitTransaction> transactions = dataConverter.convertToTransaction(rawTransactions);
+        shopService.process(transactions);
+        String report = reportGenerator.getReport();
+        fileWriter.write(report, outputFilePath.toString());
+        String expectedReport = "fruit,quantity" + lineSeparator() + "banana,100" + lineSeparator();
+        String generatedReport = Files.readString(outputFilePath);
+        assertEquals(expectedReport, generatedReport);
+    }
+
+    @Test
+    @DisplayName("should throw RuntimeException for invalid purchase (insufficient stock)")
+    void testFullProcess_invalidPurchase() throws IOException {
+        List<String> rawData = List.of(
+                "type,fruit,quantity",
+                "b,banana,10",
+                "p,banana,20"
+        );
+        Files.write(inputFilePath, rawData);
+        List<String> rawTransactions = fileReader.read(inputFilePath.toString());
+        List<FruitTransaction> transactions = dataConverter.convertToTransaction(rawTransactions);
+        assertThrows(RuntimeException.class, () -> shopService.process(transactions));
+    }
+
+    @Test
+    @DisplayName("should throw RuntimeException for invalid data format (non-numeric quantity)")
+    void testFullProcess_invalidQuantityFormat() throws IOException {
+        List<String> rawData = List.of(
+                "type,fruit,quantity",
+                "s,apple,ten"
+        );
+        Files.write(inputFilePath, rawData);
+        List<String> rawTransactions = fileReader.read(inputFilePath.toString());
+        assertThrows(RuntimeException.class, () -> dataConverter
+                .convertToTransaction(rawTransactions));
+    }
+
+    @Test
+    @DisplayName("should throw IllegalArgumentException for unknown operation code")
+    void testFullProcess_unknownOperation() throws IOException {
+        List<String> rawData = List.of(
+                "type,fruit,quantity",
+                "x,orange,50"
+        );
+        Files.write(inputFilePath, rawData);
+        List<String> rawTransactions = fileReader.read(inputFilePath.toString());
+        assertThrows(IllegalArgumentException.class, () -> dataConverter
+                .convertToTransaction(rawTransactions));
     }
 }
