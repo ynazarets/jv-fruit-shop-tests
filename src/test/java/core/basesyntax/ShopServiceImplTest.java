@@ -17,7 +17,6 @@ import core.basesyntax.strategy.SupplyOperation;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,10 +35,6 @@ class ShopServiceImplTest {
         handlerMap.put(FruitTransaction.Operation.RETURN, new ReturnOperation());
         OperationStrategy operationStrategy = new OperationStrategyImpl(handlerMap);
         shopService = new ShopServiceImpl(operationStrategy);
-    }
-
-    @AfterEach
-    void tearDown() {
         Storage.clear();
     }
 

@@ -29,7 +29,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,10 +62,6 @@ class ShopServiceIntegrationTest {
         reportGenerator = new ReportGeneratorImpl();
         inputFilePath = tempDir.resolve("input.csv");
         outputFilePath = tempDir.resolve("report.csv");
-    }
-
-    @AfterEach
-    void tearDown() {
         Storage.clear();
     }
 

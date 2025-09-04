@@ -7,7 +7,6 @@ import core.basesyntax.common.FruitTransaction;
 import core.basesyntax.db.Storage;
 import core.basesyntax.strategy.BalanceOperation;
 import core.basesyntax.strategy.OperationHandler;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,10 +19,6 @@ class BalanceOperationTest {
     @BeforeEach
     void setUp() {
         handler = new BalanceOperation();
-    }
-
-    @AfterEach
-    void tearDown() {
         Storage.clear();
     }
 
